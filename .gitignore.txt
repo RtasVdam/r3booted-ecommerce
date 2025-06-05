@@ -1,0 +1,19 @@
+# Sensitive files - DON'T upload these
+config.php
+
+# User uploads
+uploads/
+
+# System files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# Backup files
+*_backup.php
+*.bak

@@ -1,14 +1,15 @@
 <?php
-// config.php - Database configuration and common functions
+// config.php - Updated for Railway deployment
 
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', ''); // Empty for default XAMPP
-define('DB_NAME', 'r3booted_ecommerce');
+// Database configuration - Railway environment variables
+define('DB_HOST', $_ENV['DB_HOST'] ?? getenv('MYSQL_HOST') ?? 'localhost');
+define('DB_USER', $_ENV['DB_USER'] ?? getenv('MYSQL_USER') ?? 'root');
+define('DB_PASS', $_ENV['DB_PASS'] ?? getenv('MYSQL_PASSWORD') ?? '');
+define('DB_NAME', $_ENV['DB_NAME'] ?? getenv('MYSQL_DATABASE') ?? 'r3booted_ecommerce');
 
-// Site configuration
-define('SITE_URL', 'http://localhost/r3booted');
+// Site configuration - Railway will provide the URL
+$railway_url = getenv('RAILWAY_STATIC_URL');
+define('SITE_URL', $railway_url ? 'https://' . $railway_url : 'http://localhost');
 define('SITE_NAME', 'R3Booted Technology');
 
 // Create database connection
@@ -17,7 +18,16 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch(PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
+    // For Railway, we might need to create the database first
+    try {
+        $pdo_create = new PDO("mysql:host=" . DB_HOST, DB_USER, DB_PASS);
+        $pdo_create->exec("CREATE DATABASE IF NOT EXISTS " . DB_NAME);
+        $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    } catch(PDOException $e2) {
+        die("Connection failed: " . $e2->getMessage());
+    }
 }
 
 // Start session
@@ -44,6 +54,11 @@ function getCurrentUser() {
 }
 
 function redirect($url) {
+    // Handle relative URLs for Railway
+    if (!str_starts_with($url, 'http')) {
+        $base_url = rtrim(SITE_URL, '/');
+        $url = $base_url . '/' . ltrim($url, '/');
+    }
     header("Location: $url");
     exit();
 }
@@ -149,5 +164,19 @@ function getMessage() {
         return ['message' => $message, 'type' => $type];
     }
     return null;
+}
+
+// Initialize database tables if they don't exist (for Railway first deploy)
+try {
+    $pdo->exec("SHOW TABLES LIKE 'users'");
+    if ($pdo->rowCount() == 0) {
+        // Run the database schema if tables don't exist
+        $schema = file_get_contents(__DIR__ . '/database_schema.sql');
+        if ($schema) {
+            $pdo->exec($schema);
+        }
+    }
+} catch (Exception $e) {
+    // Tables might not exist yet, that's OK
 }
 ?>

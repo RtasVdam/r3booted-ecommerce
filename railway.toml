@@ -1,5 +1,5 @@
 [build]
-builder = "DOCKERFILE"
+builder = "dockerfile"
 
 [deploy]
 healthcheckPath = "/test.php"

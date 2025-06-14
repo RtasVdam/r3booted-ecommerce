@@ -3,7 +3,7 @@
 $mysql_url = getenv('MYSQL_URL');
 
 if ($mysql_url) {
-    // Parse the MySQL URL for Railway
+    // Parse the Railway MySQL URL
     $url_parts = parse_url($mysql_url);
     define('DB_HOST', $url_parts['host']);
     define('DB_USER', $url_parts['user']);
@@ -30,7 +30,13 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch(PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
+    die("Database connection failed: " . $e->getMessage());
 }
 
-// Rest of your functions...
+// Start session
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// All your existing functions go here...
+// (keep all the isLoggedIn(), formatPrice(), etc. functions)

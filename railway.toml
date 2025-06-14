@@ -1,58 +1,11 @@
-# railway.toml
-[build]
-builder = "DOCKERFILE"
+FROM php:8.1-apache
 
-[deploy]
-healthcheckPath = "/"
-healthcheckTimeout = 100
-restartPolicyType = "ON_FAILURE"
+RUN docker-php-ext-install pdo pdo_mysql
 
----
+COPY . /var/www/html/
 
-# .env.example (rename to .env for local development)
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=
-DB_NAME=r3booted_ecommerce
-SITE_URL=http://localhost
-SITE_NAME=R3Booted Technology
+RUN chown -R www-data:www-data /var/www/html
 
-# For Railway deployment, these will be set automatically:
-# DB_HOST=${{MYSQL_HOST}}
-# DB_USER=${{MYSQL_USER}}
-# DB_PASS=${{MYSQL_PASSWORD}}
-# DB_NAME=${{MYSQL_DATABASE}}
-# SITE_URL=${{RAILWAY_STATIC_URL}}
+EXPOSE 80
 
----
-
-# docker-compose.yml (for local development)
-version: '3.8'
-
-services:
-  web:
-    build: .
-    ports:
-      - "8080:80"
-    volumes:
-      - .:/var/www/html
-    depends_on:
-      - db
-    environment:
-      - DB_HOST=db
-      - DB_USER=root
-      - DB_PASS=rootpassword
-      - DB_NAME=r3booted_ecommerce
-
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: r3booted_ecommerce
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:
+CMD ["apache2-foreground"]

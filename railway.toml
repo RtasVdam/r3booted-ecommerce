@@ -1,0 +1,11 @@
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+healthcheckPath = "/test.php"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+
+[start]
+cmd = "php -S 0.0.0.0:3000 -t ."
+port = 3000

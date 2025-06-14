@@ -5,6 +5,6 @@ COPY . .
 
 RUN echo "display_errors = On\nerror_reporting = E_ALL" > /usr/local/etc/php/conf.d/error.ini
 
-EXPOSE 3000
+EXPOSE $PORT
 
-CMD ["php", "-S", "0.0.0.0:3000", "-t", ".", "test.php"]
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-3000} -t . test.php"]

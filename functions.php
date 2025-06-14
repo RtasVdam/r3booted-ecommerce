@@ -1,14 +1,10 @@
 <?php
-session_start();
-
 function isLoggedIn() {
     return isset($_SESSION['user_id']);
 }
 
 function getCurrentUser() {
     if (!isLoggedIn()) return null;
-
-    // Connect to database
     require 'config.php';
     $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
     $stmt->bind_param("i", $_SESSION['user_id']);
@@ -34,7 +30,6 @@ function getMessage() {
     return null;
 }
 
-
 function getProductsByCategory($category = null) {
     require 'config.php';
 
@@ -55,3 +50,4 @@ function getProductsByCategory($category = null) {
 
     return $products;
 }
+?>

@@ -33,3 +33,25 @@ function getMessage() {
     }
     return null;
 }
+
+
+function getProductsByCategory($category = null) {
+    require 'config.php';
+
+    if ($category) {
+        $stmt = $conn->prepare("SELECT * FROM products WHERE category = ?");
+        $stmt->bind_param("s", $category);
+    } else {
+        $stmt = $conn->prepare("SELECT * FROM products");
+    }
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $products = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $products[] = $row;
+    }
+
+    return $products;
+}

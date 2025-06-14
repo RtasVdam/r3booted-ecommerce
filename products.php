@@ -1,4 +1,13 @@
 <?php
+require_once 'config.php';
+require_once 'functions.php';
+
+$category = $_GET['category'] ?? null;
+$products = getProductsByCategory($category);
+?>
+
+
+<?php
 $pageTitle = "Products";
 include 'header.php';
 

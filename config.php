@@ -1,4 +1,6 @@
 <?php
+define('SITE_NAME', 'R3Booted Technology');
+
 $host = getenv("MYSQLHOST") ?: 'localhost';
 $user = getenv("MYSQLUSER") ?: 'root';
 $pass = getenv("MYSQLPASSWORD") ?: '';

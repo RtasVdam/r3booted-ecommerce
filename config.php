@@ -8,10 +8,10 @@ if (!defined('SITE_NAME')) {
 }
 
 $host = getenv("MYSQLHOST");
-$port = getenv("MYSQLPORT") ?: 3000;
+$port = (int)getenv("MYSQLPORT") ?: 3306;
 $user = getenv("MYSQLUSER");
 $pass = getenv("MYSQLPASSWORD");
-$db   = getenv("MYSQLDATABASE") ?: 'r3booted_ecommerce';
+$db   = getenv("MYSQLDATABASE") ?: 'railway';
 
 $conn = new mysqli($host, $user, $pass, $db, $port);
 

@@ -8,7 +8,7 @@ if (!defined('SITE_NAME')) {
 }
 
 $host = getenv("MYSQLHOST");
-$port = getenv("MYSQLPORT") ?: 3306;
+$port = getenv("MYSQLPORT") ?: 3000;
 $user = getenv("MYSQLUSER");
 $pass = getenv("MYSQLPASSWORD");
 $db   = getenv("MYSQLDATABASE") ?: 'r3booted_ecommerce';

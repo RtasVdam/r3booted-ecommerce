@@ -1,6 +1,6 @@
 -- R3Booted E-commerce Database Schema
-CREATE DATABASE r3booted_ecommerce;
-USE r3booted_ecommerce;
+--CREATE DATABASE r3booted_ecommerce;
+--USE r3booted_ecommerce;
 
 -- Users table
 CREATE TABLE users (

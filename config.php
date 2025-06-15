@@ -8,10 +8,10 @@ if (!defined('SITE_NAME')) {
 }
 
 $host = getenv("MYSQLHOST");
-$port = (int)getenv("MYSQLPORT") ?: 3306;
+$port = getenv("MYSQLPORT");
 $user = getenv("MYSQLUSER");
 $pass = getenv("MYSQLPASSWORD");
-$db   = getenv("MYSQLDATABASE") ?: 'railway';
+$db   = getenv("MYSQLDATABASE");
 
 $conn = new mysqli($host, $user, $pass, $db, $port);
 

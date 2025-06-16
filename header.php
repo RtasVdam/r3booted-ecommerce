@@ -1,16 +1,6 @@
 <?php
 require_once 'config.php';
-require_once 'functions.php';
 
-$currentUser = getCurrentUser();
-$cartCount = isLoggedIn() ? getCartCount($_SESSION['user_id']) : 0;
-$message = getMessage();
-?>
-
-
-
-<?php
-require_once 'config.php';
 $currentUser = getCurrentUser();
 $cartCount = isLoggedIn() ? getCartCount($_SESSION['user_id']) : 0;
 $message = getMessage();

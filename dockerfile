@@ -12,12 +12,15 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Create uploads directory structure and set permissions
+# Create uploads directory structure with proper permissions
 RUN mkdir -p uploads/products \
     && chown -R www-data:www-data uploads \
-    && chmod -R 775 uploads \
+    && chmod -R 777 uploads \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
+
+# Ensure uploads directory is writable
+RUN chmod -R 777 uploads/products
 
 # Configure PHP for uploads
 RUN echo "display_errors = On\nerror_reporting = E_ALL\nlog_errors = On\nupload_max_filesize = 10M\npost_max_size = 10M\nmax_file_uploads = 20" > /usr/local/etc/php/conf.d/uploads.ini

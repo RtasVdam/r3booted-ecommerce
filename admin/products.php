@@ -1,683 +1,386 @@
 <?php
-require_once '../config.php';
+$pageTitle = "Products";
+include 'header.php';
 
-if (!isAdmin()) {
-    setMessage('Access denied. Admin privileges required.', 'error');
-    redirect('../login.php');
-}
+$category = $_GET['category'] ?? 'all';
+$products = getProductsByCategory($category === 'all' ? null : $category);
+$categories = getCategories();
+?>
 
-$pageTitle = "Manage Products";
-$action = $_GET['action'] ?? 'list';
-$productId = $_GET['id'] ?? null;
+<div class="page-content">
+    <div class="container">
+        <h1 class="page-title">Our Products</h1>
+        
+        <!-- Category Filter -->
+        <div class="category-filter">
+            <a href="products.php" class="btn <?php echo $category === 'all' ? 'active' : 'btn-secondary'; ?>">All</a>
+            <?php foreach ($categories as $cat): ?>
+                <a href="products.php?category=<?php echo $cat['slug']; ?>" 
+                   class="btn <?php echo $category === $cat['slug'] ? 'active' : 'btn-secondary'; ?>">
+                    <?php echo htmlspecialchars($cat['name']); ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
 
-// Create uploads directory if it doesn't exist
-$uploadDir = '../uploads/products/';
-if (!file_exists($uploadDir)) {
-    mkdir($uploadDir, 0755, true);
-}
-
-// Handle image upload
-function handleImageUpload($file) {
-    global $uploadDir;
-    
-    if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
-        return null;
-    }
-    
-    // Validate file type
-    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!in_array($file['type'], $allowedTypes)) {
-        throw new Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
-    }
-    
-    // Validate file size (5MB max)
-    if ($file['size'] > 5 * 1024 * 1024) {
-        throw new Exception('File size too large. Maximum 5MB allowed.');
-    }
-    
-    // Generate unique filename
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = uniqid('product_') . '_' . time() . '.' . $extension;
-    $filepath = $uploadDir . $filename;
-    
-    // Move uploaded file
-    if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        return 'uploads/products/' . $filename;
-    } else {
-        throw new Exception('Failed to upload image.');
-    }
-}
-
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['add_product'])) {
-        $name = sanitizeInput($_POST['name']);
-        $description = sanitizeInput($_POST['description']);
-        $price = (float)$_POST['price'];
-        $stock = (int)$_POST['stock_quantity'];
-        $category_id = (int)$_POST['category_id'];
-        
-        $errors = [];
-        if (empty($name)) $errors[] = 'Product name is required.';
-        if (empty($description)) $errors[] = 'Description is required.';
-        if ($price <= 0) $errors[] = 'Price must be greater than 0.';
-        if ($stock < 0) $errors[] = 'Stock quantity cannot be negative.';
-        if ($category_id <= 0) $errors[] = 'Please select a category.';
-        
-        $imagePath = null;
-        
-        if (empty($errors)) {
-            try {
-                // Handle image upload
-                if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
-                    $imagePath = handleImageUpload($_FILES['image']);
-                }
-                
-                $stmt = $pdo->prepare("INSERT INTO products (name, description, price, stock_quantity, category_id, image_url) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$name, $description, $price, $stock, $category_id, $imagePath]);
-                setMessage('Product added successfully!');
-                redirect('products.php');
-            } catch (Exception $e) {
-                $errors[] = 'Error adding product: ' . $e->getMessage();
-            }
-        }
-    }
-    
-    if (isset($_POST['update_product'])) {
-        $id = (int)$_POST['id'];
-        $name = sanitizeInput($_POST['name']);
-        $description = sanitizeInput($_POST['description']);
-        $price = (float)$_POST['price'];
-        $stock = (int)$_POST['stock_quantity'];
-        $category_id = (int)$_POST['category_id'];
-        $status = $_POST['status'];
-        
-        $errors = [];
-        if (empty($name)) $errors[] = 'Product name is required.';
-        if (empty($description)) $errors[] = 'Description is required.';
-        if ($price <= 0) $errors[] = 'Price must be greater than 0.';
-        if ($stock < 0) $errors[] = 'Stock quantity cannot be negative.';
-        
-        if (empty($errors)) {
-            try {
-                // Get current product data
-                $stmt = $pdo->prepare("SELECT image_url FROM products WHERE id = ?");
-                $stmt->execute([$id]);
-                $currentProduct = $stmt->fetch();
-                
-                $imagePath = $currentProduct['image_url'];
-                
-                // Handle new image upload
-                if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
-                    $newImagePath = handleImageUpload($_FILES['image']);
-                    
-                    // Delete old image if exists
-                    if ($imagePath && file_exists('../' . $imagePath)) {
-                        unlink('../' . $imagePath);
+        <!-- Products Grid -->
+        <div class="products-grid">
+            <?php if (empty($products)): ?>
+                <div class="no-products">
+                    <p>No products found in this category.</p>
+                    <a href="products.php" class="btn">View All Products</a>
+                </div>
+            <?php else: ?>
+                <?php foreach ($products as $product): 
+                    // Use uploaded image or fallback to emoji based on category
+                    $productImage = null;
+                    if (!empty($product['image_url']) && file_exists($product['image_url'])) {
+                        $productImage = htmlspecialchars($product['image_url']);
                     }
                     
-                    $imagePath = $newImagePath;
-                }
-                
-                $stmt = $pdo->prepare("UPDATE products SET name = ?, description = ?, price = ?, stock_quantity = ?, category_id = ?, status = ?, image_url = ? WHERE id = ?");
-                $stmt->execute([$name, $description, $price, $stock, $category_id, $status, $imagePath, $id]);
-                setMessage('Product updated successfully!');
-                redirect('products.php');
-            } catch (Exception $e) {
-                $errors[] = 'Error updating product: ' . $e->getMessage();
-            }
-        }
-    }
-    
-    if (isset($_POST['delete_product'])) {
-        $id = (int)$_POST['id'];
-        try {
-            $stmt = $pdo->prepare("UPDATE products SET status = 'inactive' WHERE id = ?");
-            $stmt->execute([$id]);
-            setMessage('Product deleted successfully!');
-            redirect('products.php');
-        } catch (Exception $e) {
-            setMessage('Error deleting product: ' . $e->getMessage(), 'error');
-        }
-    }
-    
-    if (isset($_POST['delete_image'])) {
-        $id = (int)$_POST['product_id'];
-        try {
-            // Get current image path
-            $stmt = $pdo->prepare("SELECT image_url FROM products WHERE id = ?");
-            $stmt->execute([$id]);
-            $product = $stmt->fetch();
-            
-            if ($product && $product['image_url']) {
-                // Delete image file
-                if (file_exists('../' . $product['image_url'])) {
-                    unlink('../' . $product['image_url']);
-                }
-                
-                // Remove image from database
-                $stmt = $pdo->prepare("UPDATE products SET image_url = NULL WHERE id = ?");
-                $stmt->execute([$id]);
-                
-                setMessage('Product image deleted successfully!');
-            }
-        } catch (Exception $e) {
-            setMessage('Error deleting image: ' . $e->getMessage(), 'error');
-        }
-        
-        redirect('products.php?action=edit&id=' . $id);
-    }
-}
-
-// Get categories for dropdown
-$categories = getCategories();
-
-// Get product for editing
-$product = null;
-if ($action === 'edit' && $productId) {
-    $product = getProductById($productId);
-}
-
-// Get all products for listing
-if ($action === 'list') {
-    $stmt = $pdo->query("
-        SELECT p.*, c.name as category_name 
-        FROM products p 
-        LEFT JOIN categories c ON p.category_id = c.id 
-        ORDER BY p.created_at DESC
-    ");
-    $products = $stmt->fetchAll();
-}
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle . ' - ' . SITE_NAME; ?></title>
-    <link rel="stylesheet" href="../css/style.css">
-    <style>
-        .admin-header {
-            background: #343a40;
-            color: white;
-            padding: 20px 0;
-            margin-bottom: 30px;
-        }
-        
-        .admin-header h1 {
-            margin: 0;
-            text-align: center;
-        }
-        
-        .admin-nav {
-            background: #495057;
-            padding: 15px 0;
-            margin-bottom: 30px;
-        }
-        
-        .admin-nav ul {
-            list-style: none;
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin: 0;
-        }
-        
-        .admin-nav a {
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        
-        .admin-nav a:hover,
-        .admin-nav a.active {
-            background-color: #007bff;
-        }
-        
-        .products-table {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .products-table table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .products-table th,
-        .products-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .products-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-        
-        .status-active {
-            color: #28a745;
-            font-weight: bold;
-        }
-        
-        .status-inactive {
-            color: #dc3545;
-            font-weight: bold;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .action-buttons .btn {
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-        
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        
-        .back-to-site {
-            text-align: center;
-            margin: 30px 0;
-        }
-        
-        /* Image Upload Styles */
-        .image-upload-section {
-            background: #f8f9fa;
-            border: 2px dashed #dee2e6;
-            border-radius: 10px;
-            padding: 30px;
-            margin-bottom: 20px;
-            text-align: center;
-            transition: all 0.3s;
-        }
-        
-        .image-upload-section:hover {
-            border-color: #007bff;
-            background: #f0f8ff;
-        }
-        
-        .image-upload-section.dragover {
-            border-color: #007bff;
-            background: #e3f2fd;
-        }
-        
-        .current-image {
-            margin-bottom: 20px;
-        }
-        
-        .current-image img {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .image-preview {
-            margin-top: 20px;
-        }
-        
-        .image-preview img {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            margin: 10px;
-        }
-        
-        .file-input {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-        
-        .file-input-button {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .file-input-button:hover {
-            background: #0056b3;
-        }
-        
-        .upload-info {
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
-        }
-        
-        .product-image-thumb {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-        }
-        
-        .no-image-placeholder {
-            width: 60px;
-            height: 60px;
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #dee2e6;
-        }
-    </style>
-</head>
-<body>
-    <div class="admin-header">
-        <div class="container">
-            <h1>R3Booted Admin - <?php echo $pageTitle; ?></h1>
-        </div>
-    </div>
-    
-    <nav class="admin-nav">
-        <div class="container">
-            <ul>
-                <li><a href="index.php">Dashboard</a></li>
-                <li><a href="products.php" class="active">Products</a></li>
-                <li><a href="orders.php">Orders</a></li>
-                <li><a href="users.php">Users</a></li>
-                <li><a href="messages.php">Messages</a></li>
-            </ul>
-        </div>
-    </nav>
-    
-    <div class="container">
-        <?php if (isset($errors) && !empty($errors)): ?>
-            <div class="error-messages">
-                <?php foreach ($errors as $error): ?>
-                    <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-        
-        <?php if ($action === 'add' || $action === 'edit'): ?>
-            <!-- Add/Edit Product Form -->
-            <div class="page-header">
-                <h2><?php echo $action === 'add' ? 'Add New Product' : 'Edit Product'; ?></h2>
-                <a href="products.php" class="btn btn-secondary">← Back to Products</a>
-            </div>
-            
-            <div class="form-container">
-                <form method="POST" action="" enctype="multipart/form-data">
-                    <?php if ($action === 'edit'): ?>
-                        <input type="hidden" name="id" value="<?php echo $product['id']; ?>">
-                    <?php endif; ?>
-                    
-                    <!-- Image Upload Section -->
-                    <div class="image-upload-section" id="imageUploadSection">
-                        <h4>Product Image</h4>
-                        
-                        <?php if ($action === 'edit' && $product['image_url']): ?>
-                            <div class="current-image">
-                                <p><strong>Current Image:</strong></p>
-                                <img src="../<?php echo htmlspecialchars($product['image_url']); ?>" alt="Current product image">
-                                <div style="margin-top: 10px;">
-                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this image?')">
-                                        <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-                                        <button type="submit" name="delete_image" class="btn" style="background: #dc3545; padding: 5px 10px; font-size: 12px;">Delete Current Image</button>
-                                    </form>
+                    // Set fallback icon based on category
+                    $fallbackIcon = '📱'; // Default
+                    if (isset($product['category_slug'])) {
+                        switch($product['category_slug']) {
+                            case 'phone':
+                                $fallbackIcon = '📱';
+                                break;
+                            case 'laptop':
+                                $fallbackIcon = '💻';
+                                break;
+                            case 'tablet':
+                                $fallbackIcon = '📱';
+                                break;
+                            default:
+                                $fallbackIcon = '📱';
+                        }
+                    } elseif (isset($product['category_name'])) {
+                        // Fallback if category_slug is not available
+                        $categoryName = strtolower($product['category_name']);
+                        if (strpos($categoryName, 'laptop') !== false) {
+                            $fallbackIcon = '💻';
+                        } elseif (strpos($categoryName, 'tablet') !== false) {
+                            $fallbackIcon = '📱';
+                        } else {
+                            $fallbackIcon = '📱';
+                        }
+                    }
+                ?>
+                    <div class="product-card">
+                        <div class="product-image">
+                            <?php if ($productImage): ?>
+                                <img src="<?php echo $productImage; ?>" 
+                                     alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none; font-size: 48px; color: #dee2e6; width: 100%; height: 100%; align-items: center; justify-content: center;">
+                                    <?php echo $fallbackIcon; ?>
                                 </div>
+                            <?php else: ?>
+                                <div class="fallback-icon" style="font-size: 48px; color: #dee2e6;">
+                                    <?php echo $fallbackIcon; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-title"><?php echo htmlspecialchars($product['name']); ?></div>
+                            <div class="product-category">
+                                <?php echo htmlspecialchars($product['category_name'] ?? 'Uncategorized'); ?>
                             </div>
-                        <?php endif; ?>
-                        
-                        <div class="file-input-wrapper">
-                            <input type="file" id="image" name="image" accept="image/*" class="file-input" onchange="previewImage(this)">
-                            <label for="image" class="file-input-button">
-                                📷 Choose Image
-                            </label>
-                        </div>
-                        
-                        <div class="upload-info">
-                            <p>Supported formats: JPEG, PNG, GIF, WebP</p>
-                            <p>Maximum file size: 5MB</p>
-                            <p>Recommended size: 800x800 pixels</p>
-                        </div>
-                        
-                        <div id="imagePreview" class="image-preview" style="display: none;">
-                            <p><strong>Preview:</strong></p>
-                            <img id="previewImg" src="" alt="Image preview">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="name">Product Name *</label>
-                        <input type="text" id="name" name="name" 
-                               value="<?php echo htmlspecialchars($product['name'] ?? ''); ?>" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="category_id">Category *</label>
-                        <select id="category_id" name="category_id" required>
-                            <option value="">Select Category</option>
-                            <?php foreach ($categories as $category): ?>
-                                <option value="<?php echo $category['id']; ?>" 
-                                        <?php echo ($product['category_id'] ?? '') == $category['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($category['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="price">Price (R) *</label>
-                            <input type="number" step="0.01" id="price" name="price" 
-                                   value="<?php echo $product['price'] ?? ''; ?>" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="stock_quantity">Stock Quantity *</label>
-                            <input type="number" id="stock_quantity" name="stock_quantity" 
-                                   value="<?php echo $product['stock_quantity'] ?? ''; ?>" required>
+                            <div class="product-price"><?php echo formatPrice($product['price']); ?></div>
+                            <div class="product-description">
+                                <?php echo htmlspecialchars(substr($product['description'], 0, 100)) . (strlen($product['description']) > 100 ? '...' : ''); ?>
+                            </div>
+                            <div class="product-stock">
+                                <?php if ($product['stock_quantity'] > 0): ?>
+                                    <span class="in-stock">In Stock (<?php echo $product['stock_quantity']; ?>)</span>
+                                <?php else: ?>
+                                    <span class="out-of-stock">Out of Stock</span>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <?php if (isLoggedIn() && $product['stock_quantity'] > 0): ?>
+                                <form action="cart_actions.php" method="POST" style="margin-top: 15px;">
+                                    <input type="hidden" name="action" value="add">
+                                    <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
+                                    <input type="hidden" name="redirect" value="products.php?category=<?php echo urlencode($category); ?>">
+                                    
+                                    <div class="quantity-selector">
+                                        <label for="quantity_<?php echo $product['id']; ?>">Quantity:</label>
+                                        <select name="quantity" id="quantity_<?php echo $product['id']; ?>">
+                                            <?php for ($i = 1; $i <= min(10, $product['stock_quantity']); $i++): ?>
+                                                <option value="<?php echo $i; ?>"><?php echo $i; ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn" style="width: 100%;">Add to Cart</button>
+                                </form>
+                            <?php elseif (!isLoggedIn()): ?>
+                                <a href="login.php?redirect=<?php echo urlencode('products.php?category=' . $category); ?>" 
+                                   class="btn" style="width: 100%; text-align: center; display: block; text-decoration: none; margin-top: 15px;">
+                                   Login to Purchase
+                                </a>
+                            <?php else: ?>
+                                <button class="btn btn-disabled" style="width: 100%; margin-top: 15px;" disabled>
+                                    Out of Stock
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    
-                    <?php if ($action === 'edit'): ?>
-                        <div class="form-group">
-                            <label for="status">Status</label>
-                            <select id="status" name="status">
-                                <option value="active" <?php echo ($product['status'] ?? '') === 'active' ? 'selected' : ''; ?>>Active</option>
-                                <option value="inactive" <?php echo ($product['status'] ?? '') === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
-                            </select>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <div class="form-group">
-                        <label for="description">Description *</label>
-                        <textarea id="description" name="description" rows="4" required><?php echo htmlspecialchars($product['description'] ?? ''); ?></textarea>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <?php if ($action === 'add'): ?>
-                            <button type="submit" name="add_product" class="btn">Add Product</button>
-                        <?php else: ?>
-                            <button type="submit" name="update_product" class="btn">Update Product</button>
-                        <?php endif; ?>
-                        <a href="products.php" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
-            </div>
-            
-        <?php else: ?>
-            <!-- Product List -->
-            <div class="page-header">
-                <h2>Manage Products</h2>
-                <a href="products.php?action=add" class="btn">+ Add New Product</a>
-            </div>
-            
-            <div class="products-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Image</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Price</th>
-                            <th>Stock</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($products)): ?>
-                            <tr>
-                                <td colspan="8" style="text-align: center; padding: 40px;">
-                                    No products found. <a href="products.php?action=add">Add your first product</a>
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($products as $product): ?>
-                                <tr>
-                                    <td>
-                                        <?php if ($product['image_url']): ?>
-                                            <img src="../<?php echo htmlspecialchars($product['image_url']); ?>" 
-                                                 alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                                                 class="product-image-thumb">
-                                        <?php else: ?>
-                                            <div class="no-image-placeholder">📷</div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($product['name']); ?></strong>
-                                        <br><small><?php echo substr(htmlspecialchars($product['description']), 0, 50) . '...'; ?></small>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?></td>
-                                    <td><?php echo formatPrice($product['price']); ?></td>
-                                    <td>
-                                        <?php if ($product['stock_quantity'] < 10): ?>
-                                            <span style="color: #dc3545; font-weight: bold;">
-                                                <?php echo $product['stock_quantity']; ?>
-                                            </span>
-                                        <?php else: ?>
-                                            <?php echo $product['stock_quantity']; ?>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="status-<?php echo $product['status']; ?>">
-                                            <?php echo ucfirst($product['status']); ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo date('M j, Y', strtotime($product['created_at'])); ?></td>
-                                    <td>
-                                        <div class="action-buttons">
-                                            <a href="products.php?action=edit&id=<?php echo $product['id']; ?>" 
-                                               class="btn btn-secondary">Edit</a>
-                                            
-                                            <?php if ($product['status'] === 'active'): ?>
-                                                <form method="POST" style="display: inline;" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this product?')">
-                                                    <input type="hidden" name="id" value="<?php echo $product['id']; ?>">
-                                                    <button type="submit" name="delete_product" 
-                                                            class="btn" style="background: #dc3545;">Delete</button>
-                                                </form>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        
+        <?php if (!empty($products) && count($products) >= 6): ?>
+            <div class="load-more" style="text-align: center; margin-top: 40px;">
+                <p>Showing <?php echo count($products); ?> products</p>
             </div>
         <?php endif; ?>
-        
-        <div class="back-to-site">
-            <a href="index.php" class="btn">← Back to Dashboard</a>
-            <a href="../index.php" class="btn btn-secondary">← Back to Website</a>
-        </div>
     </div>
+</div>
+
+<style>
+/* Enhanced Product Card Styles for Images */
+.product-image {
+    width: 100%;
+    height: 220px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 8px 8px 0 0;
+    position: relative;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px 8px 0 0;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image img {
+    transform: scale(1.05);
+}
+
+.product-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.product-info {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+    line-height: 1.3;
+}
+
+.product-category {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.product-price {
+    font-size: 1.4rem;
+    color: #28a745;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.product-description {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    flex: 1;
+}
+
+.product-stock {
+    margin-bottom: 15px;
+}
+
+.in-stock {
+    color: #28a745;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.out-of-stock {
+    color: #dc3545;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.quantity-selector {
+    margin-bottom: 15px;
+}
+
+.quantity-selector label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.quantity-selector select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.category-filter {
+    text-align: center;
+    margin-bottom: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.category-filter .btn {
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+.no-products {
+    text-align: center;
+    padding: 80px 20px;
+    color: #666;
+}
+
+.no-products p {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.fallback-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+}
+
+/* Grid responsiveness */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
     
-    <script src="../js/main.js"></script>
-    <script>
-        // Image preview functionality
-        function previewImage(input) {
-            const preview = document.getElementById('imagePreview');
-            const previewImg = document.getElementById('previewImg');
+    .category-filter {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .category-filter .btn {
+        margin: 5px 0;
+        width: 200px;
+    }
+    
+    .product-info {
+        padding: 15px;
+    }
+    
+    .product-title {
+        font-size: 1.1rem;
+    }
+    
+    .product-price {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .product-card {
+        max-width: 100%;
+    }
+}
+
+/* Loading and error states */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.error-state {
+    text-align: center;
+    padding: 40px;
+    color: #dc3545;
+}
+</style>
+
+<script>
+// Add some interactivity
+document.addEventListener('DOMContentLoaded', function() {
+    // Add loading state to add to cart buttons
+    const addToCartButtons = document.querySelectorAll('form[action="cart_actions.php"] button[type="submit"]');
+    
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const originalText = this.innerHTML;
+            this.innerHTML = 'Adding...';
+            this.disabled = true;
             
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                
-                reader.readAsDataURL(input.files[0]);
-            } else {
-                preview.style.display = 'none';
-            }
-        }
-        
-        // Drag and drop functionality
-        const uploadSection = document.getElementById('imageUploadSection');
-        const fileInput = document.getElementById('image');
-        
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadSection.addEventListener(eventName, preventDefaults, false);
+            // Re-enable after form submission
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }, 2000);
         });
-        
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadSection.addEventListener(eventName, highlight, false);
+    });
+    
+    // Add smooth scrolling for category links
+    const categoryLinks = document.querySelectorAll('.category-filter a');
+    categoryLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            // Add loading state
+            this.style.opacity = '0.7';
+            setTimeout(() => {
+                this.style.opacity = '1';
+            }, 500);
         });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadSection.addEventListener(eventName, unhighlight, false);
-        });
-        
-        function highlight(e) {
-            uploadSection.classList.add('dragover');
-        }
-        
-        function unhighlight(e) {
-            uploadSection.classList.remove('dragover');
-        }
-        
-        uploadSection.addEventListener('drop', handleDrop, false);
-        
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
-            if (files.length > 0) {
-                fileInput.files = files;
-                previewImage(fileInput);
-            }
-        }
-    </script>
-</body>
-</html>
+    });
+});
+</script>
+
+<?php include 'footer.php'; ?>

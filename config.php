@@ -170,8 +170,15 @@ function getMessage() {
 }
 
 function redirect($url) {
-    header("Location: $url");
-    exit();
+    if (!headers_sent()) {
+        header("Location: $url");
+        exit();
+    } else {
+        // If headers are already sent, use JavaScript redirect
+        echo "<script>window.location.href = '$url';</script>";
+        echo "<noscript><meta http-equiv='refresh' content='0;url=$url'></noscript>";
+        exit();
+    }
 }
 
 // Create database tables if they don't exist

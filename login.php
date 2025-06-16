@@ -1,6 +1,5 @@
 <?php
-$pageTitle = "Login / Register";
-include 'header.php';
+require_once 'config.php';
 
 if (isLoggedIn()) {
     redirect('index.php');
@@ -79,6 +78,9 @@ if (isset($_POST['register'])) {
         }
     }
 }
+
+$pageTitle = "Login / Register";
+include 'header.php';
 ?>
 
 <div class="page-content">

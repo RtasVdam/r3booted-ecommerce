@@ -200,6 +200,36 @@ if ($action === 'list') {
         ORDER BY p.created_at DESC
     ");
     $products = $stmt->fetchAll();
+    
+    // DEBUG: Show what's stored in database (REMOVE THIS LATER)
+    if (isset($_GET['debug'])) {
+        echo "<div style='background: #f0f0f0; padding: 20px; margin: 20px 0; border-radius: 8px;'>";
+        echo "<h3>DEBUG: Product Image URLs</h3>";
+        
+        foreach ($products as $product) {
+            if ($product['image_url']) {
+                echo "<div style='margin: 10px 0; padding: 10px; background: white; border-radius: 4px;'>";
+                echo "<strong>" . htmlspecialchars($product['name']) . "</strong><br>";
+                echo "<strong>Database image_url:</strong> " . htmlspecialchars($product['image_url']) . "<br>";
+                
+                if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
+                    $filename = basename($product['image_url']);
+                    $serveUrl = 'serve_image.php?file=' . urlencode($filename);
+                    echo "<strong>Constructed URL:</strong> " . htmlspecialchars($serveUrl) . "<br>";
+                    echo "<strong>Full URL:</strong> <a href='" . $serveUrl . "' target='_blank'>" . $serveUrl . "</a><br>";
+                    
+                    // Check if file exists in /tmp
+                    $tmpPath = '/tmp/product_uploads/' . $filename;
+                    echo "<strong>File exists in /tmp:</strong> " . (file_exists($tmpPath) ? 'YES' : 'NO') . "<br>";
+                    if (file_exists($tmpPath)) {
+                        echo "<strong>File size:</strong> " . filesize($tmpPath) . " bytes<br>";
+                    }
+                }
+                echo "</div>";
+            }
+        }
+        echo "</div>";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -475,12 +505,16 @@ if ($action === 'list') {
                                 <?php 
                                 // Handle both regular uploads and tmp uploads
                                 if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
-                                    $imageSrc = 'serve_image.php?file=' . urlencode(basename($product['image_url']));
+                                    // Extract just the filename from tmp_uploads/filename.jpg
+                                    $filename = basename($product['image_url']);
+                                    $imageSrc = 'serve_image.php?file=' . urlencode($filename);
                                 } else {
                                     $imageSrc = '../' . htmlspecialchars($product['image_url']);
                                 }
                                 ?>
-                                <img src="<?php echo $imageSrc; ?>" alt="Current product image">
+                                <img src="<?php echo $imageSrc; ?>" alt="Current product image" 
+                                     onerror="this.style.display='none'; this.nextSibling.style.display='block';">
+                                <div style="display: none; color: red;">❌ Image failed to load</div>
                                 <div style="margin-top: 10px;">
                                     <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this image?')">
                                         <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
@@ -604,14 +638,18 @@ if ($action === 'list') {
                                             <?php 
                                             // Handle both regular uploads and tmp uploads
                                             if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
-                                                $imageSrc = 'serve_image.php?file=' . urlencode(basename($product['image_url']));
+                                                // Extract just the filename from tmp_uploads/filename.jpg
+                                                $filename = basename($product['image_url']);
+                                                $imageSrc = 'serve_image.php?file=' . urlencode($filename);
                                             } else {
                                                 $imageSrc = '../' . htmlspecialchars($product['image_url']);
                                             }
                                             ?>
                                             <img src="<?php echo $imageSrc; ?>" 
                                                  alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                                                 class="product-image-thumb">
+                                                 class="product-image-thumb"
+                                                 onerror="this.style.display='none'; this.nextSibling.style.display='flex';">
+                                            <div class="no-image-placeholder" style="display: none;">📷</div>
                                         <?php else: ?>
                                             <div class="no-image-placeholder">📷</div>
                                         <?php endif; ?>

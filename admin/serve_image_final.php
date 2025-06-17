@@ -1,6 +1,4 @@
 <?php
-// serve_image.php - Serves images from /tmp directory
-
 $filename = $_GET['file'] ?? '';
 
 if (empty($filename)) {
@@ -29,7 +27,7 @@ if ($imageInfo === false) {
 $mimeType = $imageInfo['mime'];
 header('Content-Type: ' . $mimeType);
 header('Content-Length: ' . filesize($filepath));
-header('Cache-Control: public, max-age=3600'); // Cache for 1 hour
+header('Cache-Control: public, max-age=3600');
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($filepath)) . ' GMT');
 
 // Output the image

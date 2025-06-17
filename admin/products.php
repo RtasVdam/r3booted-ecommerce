@@ -10,20 +10,10 @@ $pageTitle = "Manage Products";
 $action = $_GET['action'] ?? 'list';
 $productId = $_GET['id'] ?? null;
 
-// Handle image upload function - USES /tmp directory
+// Handle image upload function - USES BASE64 storage in database
 function handleImageUpload($file) {
     if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
         return null;
-    }
-    
-    // Use /tmp directory which is always writable in containers
-    $uploadDir = '/tmp/product_uploads/';
-    
-    // Create directory if it doesn't exist
-    if (!file_exists($uploadDir)) {
-        if (!mkdir($uploadDir, 0777, true)) {
-            throw new Exception('Failed to create upload directory in /tmp');
-        }
     }
     
     // Validate file type
@@ -36,23 +26,17 @@ function handleImageUpload($file) {
         throw new Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
     }
     
-    // Validate file size (5MB max)
-    if ($file['size'] > 5 * 1024 * 1024) {
-        throw new Exception('File size too large. Maximum 5MB allowed.');
+    // Validate file size (2MB max for base64 storage)
+    if ($file['size'] > 2 * 1024 * 1024) {
+        throw new Exception('File size too large. Maximum 2MB allowed.');
     }
     
-    // Generate unique filename
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = uniqid('product_') . '_' . time() . '.' . $extension;
-    $filepath = $uploadDir . $filename;
+    // Read file content and encode as base64
+    $imageData = file_get_contents($file['tmp_name']);
+    $base64 = base64_encode($imageData);
     
-    // Move uploaded file to /tmp
-    if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        // Return a special path that indicates it's in /tmp
-        return 'tmp_uploads/' . $filename;
-    } else {
-        throw new Exception('Failed to upload image to temporary directory.');
-    }
+    // Return data URL format (can be used directly in img src)
+    return 'data:' . $mimeType . ';base64,' . $base64;
 }
 
 // Handle form submissions
@@ -117,15 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Handle new image upload
                 if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
                     $newImagePath = handleImageUpload($_FILES['image']);
-                    
-                    // Delete old image if exists and it's in tmp
-                    if ($imagePath && strpos($imagePath, 'tmp_uploads/') === 0) {
-                        $oldFile = '/tmp/product_uploads/' . basename($imagePath);
-                        if (file_exists($oldFile)) {
-                            unlink($oldFile);
-                        }
-                    }
-                    
+                    // For base64, we don't need to delete old images since they're stored in database
                     $imagePath = $newImagePath;
                 }
                 
@@ -160,14 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $product = $stmt->fetch();
             
             if ($product && $product['image_url']) {
-                // Delete image file from /tmp if it exists there
-                if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
-                    $tmpFile = '/tmp/product_uploads/' . basename($product['image_url']);
-                    if (file_exists($tmpFile)) {
-                        unlink($tmpFile);
-                    }
-                }
-                
+                // For base64 images, no file cleanup needed
                 // Remove image from database
                 $stmt = $pdo->prepare("UPDATE products SET image_url = NULL WHERE id = ?");
                 $stmt->execute([$id]);
@@ -502,17 +471,8 @@ if ($action === 'list') {
                         <?php if ($action === 'edit' && $product['image_url']): ?>
                             <div class="current-image">
                                 <p><strong>Current Image:</strong></p>
-                                <?php 
-                                // Handle both regular uploads and tmp uploads
-                                if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
-                                    // Extract just the filename from tmp_uploads/filename.jpg
-                                    $filename = basename($product['image_url']);
-                                    $imageSrc = 'serve_image.php?file=' . urlencode($filename);
-                                } else {
-                                    $imageSrc = '../' . htmlspecialchars($product['image_url']);
-                                }
-                                ?>
-                                <img src="<?php echo $imageSrc; ?>" alt="Current product image" 
+                                <img src="<?php echo htmlspecialchars($product['image_url']); ?>" alt="Current product image" 
+                                     style="max-width: 200px; max-height: 200px;"
                                      onerror="this.style.display='none'; this.nextSibling.style.display='block';">
                                 <div style="display: none; color: red;">❌ Image failed to load</div>
                                 <div style="margin-top: 10px;">
@@ -635,17 +595,7 @@ if ($action === 'list') {
                                 <tr>
                                     <td>
                                         <?php if ($product['image_url']): ?>
-                                            <?php 
-                                            // Handle both regular uploads and tmp uploads
-                                            if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
-                                                // Extract just the filename from tmp_uploads/filename.jpg
-                                                $filename = basename($product['image_url']);
-                                                $imageSrc = 'serve_image.php?file=' . urlencode($filename);
-                                            } else {
-                                                $imageSrc = '../' . htmlspecialchars($product['image_url']);
-                                            }
-                                            ?>
-                                            <img src="<?php echo $imageSrc; ?>" 
+                                            <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
                                                  alt="<?php echo htmlspecialchars($product['name']); ?>" 
                                                  class="product-image-thumb"
                                                  onerror="this.style.display='none'; this.nextSibling.style.display='flex';">

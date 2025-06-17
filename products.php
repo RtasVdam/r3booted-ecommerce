@@ -34,16 +34,8 @@ $categories = getCategories();
                     // Use uploaded image or fallback to emoji based on category
                     $productImage = null;
                     if (!empty($product['image_url'])) {
-                        if (strpos($product['image_url'], 'tmp_uploads/') === 0) {
-                            // Image is stored in /tmp, use serve_image script with just the filename
-                            $filename = basename($product['image_url']);
-                            $productImage = 'admin/serve_image.php?file=' . urlencode($filename);
-                        } else {
-                            // Regular upload path - check if file exists
-                            if (file_exists($product['image_url'])) {
-                                $productImage = htmlspecialchars($product['image_url']);
-                            }
-                        }
+                        // With base64 storage, image_url contains the full data URL
+                        $productImage = htmlspecialchars($product['image_url']);
                     }
                     
                     // Set fallback icon based on category

@@ -102,7 +102,7 @@ $categories = getCategories();
                             </div>
                             
                             <?php if (isLoggedIn() && $product['stock_quantity'] > 0): ?>
-                                <form action="cart_actions.php" method="POST" style="margin-top: 15px;">
+                                <form action="cart_actions.php" method="POST" style="margin-top: 15px;" onsubmit="return handleAddToCart(this);">
                                     <input type="hidden" name="action" value="add">
                                     <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
                                     <input type="hidden" name="redirect" value="products.php?category=<?php echo urlencode($category); ?>">
@@ -343,20 +343,44 @@ $categories = getCategories();
 <script>
 // Add some interactivity
 document.addEventListener('DOMContentLoaded', function() {
-    // Add loading state to add to cart buttons
-    const addToCartButtons = document.querySelectorAll('form[action="cart_actions.php"] button[type="submit"]');
+    console.log('Products page loaded');
+});
+
+// Handle add to cart with better error handling
+function handleAddToCart(form) {
+    const button = form.querySelector('button[type="submit"]');
+    const originalText = button.innerHTML;
     
-    addToCartButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            const originalText = this.innerHTML;
-            this.innerHTML = 'Adding...';
-            this.disabled = true;
+    // Show loading state
+    button.innerHTML = 'Adding...';
+    button.disabled = true;
+    
+    // Allow form to submit normally
+    // The loading state will show until page reloads
+    return true;
+}
+
+// Add debug logging
+document.addEventListener('DOMContentLoaded', function() {
+    const addToCartForms = document.querySelectorAll('form[action="cart_actions.php"]');
+    console.log('Found', addToCartForms.length, 'add to cart forms');
+    
+    addToCartForms.forEach((form, index) => {
+        form.addEventListener('submit', function(e) {
+            console.log('Form', index, 'submitted');
+            console.log('Action:', this.action);
+            console.log('Method:', this.method);
             
-            // Re-enable after form submission
-            setTimeout(() => {
-                this.innerHTML = originalText;
-                this.disabled = false;
-            }, 2000);
+            // Check if cart_actions.php exists
+            fetch('cart_actions.php', {method: 'HEAD'})
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('cart_actions.php not found or not accessible');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking cart_actions.php:', error);
+                });
         });
     });
 });

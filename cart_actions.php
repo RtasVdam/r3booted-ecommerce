@@ -6,7 +6,7 @@ if (!isLoggedIn()) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    redirect('cart.php');
+    redirect('products.php');
 }
 
 $action = $_POST['action'] ?? '';
@@ -94,6 +94,7 @@ try {
     
 } catch (Exception $e) {
     setMessage('An error occurred. Please try again.', 'error');
+    error_log('Cart action error: ' . $e->getMessage());
 }
 
 // Redirect back

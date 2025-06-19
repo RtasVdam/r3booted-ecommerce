@@ -31,31 +31,6 @@
 - [Contributing](#-contributing)
 - [License](#-license)
 
-## ✨ Features
-
-### 🛍️ Customer Features
-- **Product Browsing**: Browse products with category filtering (Phones, Laptops, Tablets)
-- **Shopping Cart**: Add/remove items, update quantities, persistent cart across sessions
-- **User Authentication**: Secure registration and login system
-- **Checkout Process**: Complete order placement with shipping information
-- **Responsive Design**: Mobile-first design that works on all devices
-- **Contact System**: Contact form for customer inquiries
-
-### 👨‍💼 Admin Features
-- **Product Management**: Full CRUD operations for products with image upload
-- **Order Management**: View and update order statuses
-- **User Management**: Manage customer accounts and roles
-- **Message Management**: View and respond to customer messages
-- **Dashboard Analytics**: View sales statistics and key metrics
-- **Inventory Tracking**: Low stock alerts and quantity management
-
-### 🔧 Technical Features
-- **Security**: Password hashing, SQL injection prevention, XSS protection
-- **Session Management**: Secure user sessions with role-based access control
-- **Database Integrity**: Normalized database with foreign key constraints
-- **Error Handling**: Comprehensive error handling with user-friendly messages
-- **Image Handling**: Base64 image storage with validation and fallbacks
-- **Form Validation**: Client-side and server-side validation
 
 ## 📸 Screenshots
 
@@ -345,30 +320,6 @@ DESCRIBE products;
 SELECT COUNT(*) FROM users;
 ```
 
-## 🚀 Deployment
-
-### Production Checklist
-- [ ] Update database credentials
-- [ ] Set secure session configuration
-- [ ] Configure proper file permissions
-- [ ] Enable HTTPS
-- [ ] Set up database backups
-- [ ] Configure error logging
-- [ ] Optimize database queries
-- [ ] Set up monitoring
-
-### Railway Deployment
-1. Connect your GitHub repository
-2. Set environment variables in Railway dashboard
-3. Deploy automatically on push
-
-### Traditional Hosting
-1. Upload files via FTP/SFTP
-2. Create database and import schema
-3. Update configuration files
-4. Set proper file permissions
-
-## 🤝 Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -386,13 +337,6 @@ We welcome contributions! Please follow these steps:
    git push origin feature/amazing-feature
    ```
 5. **Open a Pull Request**
-
-### Development Guidelines
-- Follow PSR-12 coding standards for PHP
-- Use semantic HTML5 elements
-- Write responsive CSS with mobile-first approach
-- Include comments for complex functionality
-- Test thoroughly before submitting
 
 ## 🐛 Known Issues
 
@@ -412,25 +356,10 @@ We welcome contributions! Please follow these steps:
 - [ ] **Inventory Management**: Advanced stock tracking
 - [ ] **Customer Reviews**: Product rating and review system
 
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-- **Email**: support@r3booted.com
-- **Phone**: (+27) 782326445
-- **Location**: Boksburg, Gauteng, South Africa
-- **Business Hours**: Mon-Fri 9:00 AM - 6:00 PM, Sat 10:00 AM - 2:00 PM
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- **PHP Community**: For excellent documentation and resources
-- **MDN Web Docs**: For comprehensive web development guides
-- **Stack Overflow**: For community support and solutions
-- **Railway**: For providing deployment platform
 
 ## 📊 Project Stats
 

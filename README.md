@@ -17,20 +17,6 @@
 - **Admin**: `admin@r3booted.com` / `admin123`
 - **User**: `user@example.com` / `password123`
 
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Screenshots](#-screenshots)
-- [Technology Stack](#-technology-stack)
-- [Installation](#-installation)
-- [Database Setup](#-database-setup)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [API Documentation](#-api-documentation)
-- [Security Features](#-security-features)
-- [Contributing](#-contributing)
-- [License](#-license)
-
 
 ## 🛠️ Technology Stack
 
@@ -202,23 +188,6 @@ Edit `config.php` to modify:
    - View all registered users
    - Manage user roles (user/admin)
    - Monitor user activity
-
-
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. **Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Open a Pull Request**
 
 ## 🐛 Known Issues
 

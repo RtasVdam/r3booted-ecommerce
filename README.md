@@ -32,28 +32,6 @@
 - [License](#-license)
 
 
-## 📸 Screenshots
-
-<details>
-<summary>Click to view screenshots</summary>
-
-### Homepage
-![Homepage](screenshots/homepage.png)
-
-### Product Catalog
-![Products](screenshots/products.png)
-
-### Shopping Cart
-![Cart](screenshots/cart.png)
-
-### Admin Dashboard
-![Admin](screenshots/admin-dashboard.png)
-
-### Mobile View
-![Mobile](screenshots/mobile-view.png)
-
-</details>
-
 ## 🛠️ Technology Stack
 
 ### Backend
@@ -372,9 +350,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-
 **Made with ❤️ by R3Booted Technology**
-
-[⬆ Back to Top](#r3booted-technology-e-commerce-platform)
-
 </div>
